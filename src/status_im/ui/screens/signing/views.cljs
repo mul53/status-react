@@ -13,6 +13,7 @@
             [status-im.ui.components.icons.vector-icons :as icons]
             [status-im.ui.components.text-input.view :as text-input]
             [status-im.i18n :as i18n]
+            [taoensso.timbre :as log]
             [status-im.utils.security :as security]
             [status-im.ui.screens.signing.sheets :as sheets]
             [status-im.ethereum.tokens :as tokens]
@@ -160,31 +161,81 @@
      [react/view {:align-items :center :margin-top 16 :margin-bottom 40}
       [sign-with-keycard-button nil nil]])])
 
+(defn signature-request [{:keys [error keycard-step in-progress? enabled?] :as sign}]
+  (let [_ (log/info "#signature-req" sign)
+        title (case keycard-step
+                :connect :t/looking-for-cards
+                :signing :t/processing
+                :error      :t/lost-connection
+                :success :t/success)
+        subtitle (case keycard-step
+                   :connect :t/hold-card
+                   :signing :t/try-keeping-the-card-still
+                   :error :t/tap-card-again
+                   :success :t/transaction-signed)]
+    [react/view {:style {:padding 16 :align-items :center}}
+     [react/view
+      [react/text {:style {:font-size 17 :font-weight "700"}}
+       "Confirmation request"]]
+     [react/view {:style (styles/sheet-icon (case keycard-step
+                                              (:connect :signing) colors/blue-transparent-10
+                                              :error colors/red-transparent-10
+                                              :success colors/green-transparent-10))}
+      (case keycard-step
+        :connect
+        [icons/icon :main-icons/nfc {:color colors/blue :width 27 :height 21}]
+        :signing
+        [react/activity-indicator {:animating true :color colors/blue}]
+        :error
+        [icons/icon :main-icons/close {:color colors/red}]
+        :success
+        [icons/icon :main-icons/check {:color colors/green}])]
+     [react/text {:style styles/sheet-title} (i18n/label title)]
+     [react/text {:style styles/sheet-subtitle} (i18n/label subtitle)]
+     [button/button (merge {:type :main
+                            :disabled? (= keycard-step :success)
+                            :container-style {:margin-bottom 16}
+                            :label (i18n/label :t/show-transaction-data)}
+                           {:on-press #(re-frame/dispatch [:navigate-to :keycard-transaction-data])})]
+     [button/button (merge {:type :secondary
+                            :theme :red
+                            :disabled? (= keycard-step :success)
+                            :label (i18n/label :t/decline)}
+                           {:on-press #(re-frame/dispatch [:signing.ui/cancel-is-pressed])})]]))
+(views/defview transaction-data []
+  (views/letsubs [{:keys [formatted-data]} [:signing/sign]]
+    [react/view
+     [react/text {:style {:font-size 17}} formatted-data]]))
+
 (views/defview password-view [{:keys [type error in-progress? enabled?] :as sign}]
   (views/letsubs [phrase [:signing/phrase]]
-    (case type
-      :password
-      [react/view {:padding-top 8 :padding-bottom 8}
-       [signing-phrase-view phrase]
-       [text-input/text-input-with-label
-        {:secure-text-entry   true
-         :placeholder         (i18n/label :t/enter-password)
-         :on-change-text      #(re-frame/dispatch [:signing.ui/password-is-changed (security/mask-data %)])
-         :accessibility-label :enter-password-input
-         :auto-capitalize     :none
-         :editable            (not in-progress?)
-         :error               error
-         :container           {:margin-top 12 :margin-bottom 12 :margin-horizontal 16}}]
-       [react/view {:align-items :center :height 60}
-        (if in-progress?
-          [react/activity-indicator {:animating true
-                                     :size      :large}]
-          [button/button {:on-press  #(re-frame/dispatch [:signing.ui/sign-is-pressed])
-                          :disabled? (not enabled?)
-                          :label     :t/transactions-sign}])]]
-      :keycard
-      [keycard-view sign phrase]
-      [react/view])))
+    (do
+      (log/info "#password-view" sign)
+      (case type
+        :password
+        [react/view {:padding-top 8 :padding-bottom 8}
+         [signing-phrase-view phrase]
+         [text-input/text-input-with-label
+          {:secure-text-entry   true
+           :placeholder         (i18n/label :t/enter-password)
+           :on-change-text      #(re-frame/dispatch [:signing.ui/password-is-changed (security/mask-data %)])
+           :accessibility-label :enter-password-input
+           :auto-capitalize     :none
+           :editable            (not in-progress?)
+           :error               error
+           :container           {:margin-top 12 :margin-bottom 12 :margin-horizontal 16}}]
+         [react/view {:align-items :center :height 60}
+          (if in-progress?
+            [react/activity-indicator {:animating true
+                                       :size      :large}]
+            [button/button {:on-press  #(re-frame/dispatch [:signing.ui/sign-is-pressed])
+                            :disabled? (not enabled?)
+                            :label     :t/transactions-sign}])]]
+        :keycard
+        [keycard-view sign phrase]
+        :pinless
+        [signature-request sign]
+        [react/view]))))
 
 (views/defview message-sheet []
   (views/letsubs [{:keys [formatted-data type] :as sign} [:signing/sign]]

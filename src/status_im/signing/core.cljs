@@ -7,6 +7,7 @@
             [status-im.ethereum.eip55 :as eip55]
             [status-im.ethereum.tokens :as tokens]
             [status-im.i18n :as i18n]
+            [status-im.signing.keycard :as signing.keycard]
             [status-im.native-module.core :as status]
             [status-im.utils.fx :as fx]
             [status-im.utils.hex :as utils.hex]
@@ -168,17 +169,23 @@
 
 (fx/defn show-sign [{:keys [db] :as cofx}]
   (let [{:signing/keys [queue]} db
-        {{:keys [gas gasPrice] :as tx-obj} :tx-obj {:keys [data typed?] :as message} :message :as tx} (last queue)
+        {{:keys [gas gasPrice] :as tx-obj} :tx-obj {:keys [data typed? pinless?] :as message} :message :as tx} (last queue)
         keycard-multiaccount? (boolean (get-in db [:multiaccount :keycard-pairing]))
         wallet-set-up-passed? (get-in db [:multiaccount :wallet-set-up-passed?])
         updated-db (if wallet-set-up-passed? db (assoc db :popover/popover {:view :signing-phrase}))]
     (if message
-      {:db (assoc updated-db
-                  :signing/in-progress? true
-                  :signing/queue (drop-last queue)
-                  :signing/tx tx
-                  :signing/sign {:type           (if keycard-multiaccount? :keycard :password)
-                                 :formatted-data (if typed? (types/json->clj data) (ethereum/hex-to-utf8 data))})}
+      (fx/merge cofx
+                {:db (assoc updated-db
+                            :signing/in-progress? true
+                            :signing/queue (drop-last queue)
+                            :signing/tx tx
+                            :signing/sign {:type           (cond pinless? :pinless
+                                                                 keycard-multiaccount? :keycard
+                                                                 :else :password)
+                                           :formatted-data (if typed? (types/json->clj data) (ethereum/hex-to-utf8 data))
+                                           :keycard-step (when pinless? :connect)})}
+                (when pinless?
+                  (signing.keycard/hash-message message :hardwallet/store-hash-and-sign-typed)))
       (fx/merge cofx
                 {:db
                  (assoc updated-db
