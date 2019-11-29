@@ -101,7 +101,8 @@
       [asset-selector tx]
       (when amount-error
         [tooltip/tooltip amount-error {:bottom-value 2
-                                       :font-size    12}])]
+                                       :font-size    12
+                                       :accessibility-label :amount-error-tooltip}])]
      [components/separator]
      [list-item/list-item {:type :section-header :title :t/from}]
      [render-account from token]
