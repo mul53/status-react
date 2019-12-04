@@ -5,7 +5,6 @@
 (def tooltip-container
   {:position       :absolute
    :align-items    :center
-   :pointer-events :none
    :left           0
    :right          0
    :top            0})
