@@ -1140,6 +1140,18 @@
      (group-by :custom? (map #(assoc % :checked? (boolean (get vt-set (keyword (:symbol %))))) all-tokens)))))
 
 (re-frame/reg-sub
+ :wallet/fetching-tx-history?
+ :<- [:wallet]
+ (fn [wallet [_ address]]
+   (get-in wallet [:accounts address :fetching-history?])))
+
+(re-frame/reg-sub
+ :wallet/fetching-recent-tx-history?
+ :<- [:wallet]
+ (fn [wallet [_ address]]
+   (get-in wallet [:accounts address :fetching-recent-history?])))
+
+(re-frame/reg-sub
  :wallet/error-message
  :<- [:wallet]
  (fn [wallet]

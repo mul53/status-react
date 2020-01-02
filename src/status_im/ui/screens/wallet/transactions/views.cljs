@@ -72,15 +72,36 @@
                                         {:accessibility-label :show-transaction-button})}]]]])
 
 (defn history-list
-  [transactions-history-sections]
-  [react/view components.styles/flex
-   [list/section-list {:sections        transactions-history-sections
-                       :key-fn          :hash
-                       :render-fn       #(render-transaction %)
-                       :empty-component
-                       [react/i18n-text {:style styles/empty-text
-                                         :key   :transactions-history-empty}]
-                       :refreshing      false}]])
+  [transactions-history-sections address]
+  (let [fetching-recent-history? @(re-frame/subscribe [:wallet/fetching-recent-tx-history? address])
+        fetching-more-history? @(re-frame/subscribe [:wallet/fetching-tx-history? address])]
+    [react/view components.styles/flex
+     (when fetching-recent-history?
+       [react/view
+        {:style {:width 100
+                 :height 40
+                 :background-color :green}}
+        [react/activity-indicator {:color     :white
+                                   :animating true}]])
+     [list/section-list
+      {:sections     transactions-history-sections
+       :key-fn       :hash
+       :render-fn    #(render-transaction %)
+       :empty-component
+       [react/i18n-text {:style styles/empty-text
+                         :key   :transactions-history-empty}]
+       :refreshing   false}]
+     (when-not fetching-recent-history?
+       [react/view {:style {:width 100
+                            :height 40
+                            :background-color :green}}
+        (when fetching-more-history?
+          [react/activity-indicator {:color     :white
+                                     :animating true}])
+        [react/text
+         {:on-press #(re-frame/dispatch
+                      [:transactions/end-reached address])}
+         "load-more"]])]))
 
 (defn- render-item-filter [{:keys [id label checked? on-touch]}]
   [react/view {:accessibility-label :filter-item}

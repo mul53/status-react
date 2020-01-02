@@ -21,6 +21,7 @@
                     (update :timestamp decode/uint))}
    "eth_getTransactionByHash" {}
    "eth_getTransactionReceipt" {}
+   "eth_getBlockByNumber" {}
    "eth_newBlockFilter" {:subscription? true}
    "eth_newFilter" {:subscription? true}
    "eth_syncing" {}
@@ -69,6 +70,8 @@
    "status_chats" {}
    "wallet_getTransfers" {}
    "wallet_getTokensBalances" {}
+   "wallet_getBlocksByAddress" {}
+   "wallet_getTransfersByAddressPage" {}
    "wallet_getCustomTokens" {}
    "wallet_addCustomToken" {}
    "wallet_deleteCustomToken" {}
