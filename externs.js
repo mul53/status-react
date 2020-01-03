@@ -438,6 +438,7 @@ var TopLevel = {
   "scrollTo" : function () {},
   "scrollToEnd" : function () {},
   "scrollToIndex" : function () {},
+  "scrollToLocation" : function () {},
   "section" : function () {},
   "selection" : function () {},
   "sendDirectMessage" : function () {},
