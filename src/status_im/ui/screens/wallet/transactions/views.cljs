@@ -99,8 +99,9 @@
           [react/activity-indicator {:color     :white
                                      :animating true}])
         [react/text
-         {:on-press #(re-frame/dispatch
-                      [:transactions/end-reached address])}
+         {:on-press (when-not fetching-more-history?
+                      #(re-frame/dispatch
+                        [:transactions/end-reached address]))}
          "load-more"]])]))
 
 (defn- render-item-filter [{:keys [id label checked? on-touch]}]
