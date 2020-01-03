@@ -29,7 +29,10 @@
    :padding-horizontal 16
    :background-color   colors/white
    :align-items        :center
-   :justify-content    :center})
+   :justify-content    :center
+   :position :absolute
+   :top (- search-input-height)
+   :width "100%"})
 
 (def search-input-container
   {:background-color colors/gray-lighter

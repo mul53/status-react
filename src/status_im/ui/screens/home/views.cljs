@@ -19,7 +19,8 @@
             [status-im.constants :as constants]
             [status-im.ui.components.colors :as colors]
             [status-im.ui.screens.add-new.new-public-chat.view :as new-public-chat]
-            [status-im.ui.components.button :as button])
+            [status-im.ui.components.button :as button]
+            [taoensso.timbre :as log])
   (:require-macros [status-im.utils.views :as views]))
 
 (defn welcome-image-wrapper []
@@ -83,45 +84,56 @@
   [react/view {:style {:flex 1 :flex-direction :row :align-items :center :justify-content :center}}
    [react/i18n-text {:style styles/welcome-blank-text :key :welcome-blank-message}]])
 
-(defn home-items-view [_ _ _ _ search-input-state]
+(defn home-items-view [_ _ _ _]
   (let [analyze-pos? (reagent/atom true)
         start-pos (reagent/atom 0)]
     (fn [search-filter chats all-home-items hide-home-tooltip?]
-      (if search-filter
-        [filter.views/home-filtered-items-list chats]
-        [react/animated-view
-         {:style {:flex             1
-                  :background-color :white
-                  :margin-bottom    (- styles/search-input-height)
-                  :transform        [{:translateY (:height @search-input-state)}]}}
-         (if (or (seq all-home-items) (not hide-home-tooltip?))
-           [list/flat-list (merge {:data           all-home-items
-                                   :key-fn         first
-                                   :header         [react/view {:height 4 :flex 1}]
-                                   :footer         [react/view
-                                                    (when-not hide-home-tooltip?
-                                                      [home-tooltip-view])
-                                                    [react/view {:height 68 :flex 1}]]
-                                   :on-scroll-begin-drag
-                                   (fn [e]
-                                     (reset! analyze-pos? true)
-                                     (reset! start-pos (.-y (.-contentOffset (.-nativeEvent e)))))
-                                   :on-scroll-end-drag
-                                   (fn [e]
-                                     (reset! analyze-pos? false))
-                                   :on-scroll
-                                   (fn [e]
-                                     (let [y-pos (.-y (.-contentOffset (.-nativeEvent e)))
-                                           scroling-down? (> y-pos @start-pos)
-                                           scrolling-up-from-top? (< y-pos -20)]
-                                       (if (and @analyze-pos? scrolling-up-from-top?)
-                                         (filter.views/show-search!))
-                                       (if (and @analyze-pos? scroling-down?)
-                                         (filter.views/hide-search!))))
-                                   :render-fn
-                                   (fn [home-item _]
-                                     [inner-item/home-list-item home-item])})]
-           [welcome-blank-page])]))))
+      ;[react/animated-view
+      ; {:style {:flex             1
+      ;          :background-color :white
+      ;          :margin-bottom    (- styles/search-input-height)
+      ;          }}
+      ; (if (or (seq all-home-items) (not hide-home-tooltip?))
+      [filter.views/home-filtered-items-list chats search-filter all-home-items]
+       ; [welcome-blank-page])
+       ;]
+
+      ;(if search-filter
+      ;  [filter.views/home-filtered-items-list chats]
+      ;  [react/animated-view
+      ;   {:style {:flex             1
+      ;            :background-color :white
+      ;            :margin-bottom    (- styles/search-input-height)
+      ;            }}
+      ;   (if (or (seq all-home-items) (not hide-home-tooltip?))
+      ;     [list/flat-list (merge {:data           all-home-items
+      ;                             :key-fn         first
+      ;                             :header         [react/view {:height 4 :flex 1}]
+      ;                             :footer         [react/view
+      ;                                              (when-not hide-home-tooltip?
+      ;                                                [home-tooltip-view])
+      ;                                              [react/view {:height 68 :flex 1}]]
+      ;                             :on-scroll-begin-drag
+      ;                             (fn [e]
+      ;                               (reset! analyze-pos? true)
+      ;                               (reset! start-pos (.-y (.-contentOffset (.-nativeEvent e)))))
+      ;                             :on-scroll-end-drag
+      ;                             (fn [e]
+      ;                               (reset! analyze-pos? false))
+      ;                             :on-scroll
+      ;                             (fn [e]
+      ;                               (let [y-pos (.-y (.-contentOffset (.-nativeEvent e)))
+      ;                                     scroling-down? (> y-pos @start-pos)
+      ;                                     scrolling-up-from-top? (< y-pos -20)]
+      ;                                 (if (and @analyze-pos? scrolling-up-from-top?)
+      ;                                   (filter.views/show-search!))
+      ;                                 (if (and @analyze-pos? scroling-down?)
+      ;                                   (filter.views/hide-search!))))
+      ;                             :render-fn
+      ;                             (fn [home-item _]
+      ;                               [inner-item/home-list-item home-item])})]
+      ;     [welcome-blank-page])])
+)))
 
 (views/defview home-action-button [home-width]
   (views/letsubs [logging-in? [:multiaccounts/login]]
@@ -170,13 +182,11 @@
            [react/activity-indicator {:flex      1
                                       :animating true}]
            [react/view {:flex 1}
-            [filter.views/search-input-wrapper search-filter]
             [home-items-view
              search-filter
              chats
              all-home-items
-             hide-home-tooltip?
-             filter.views/search-input-state]])]
+             hide-home-tooltip?]])]
         [home-action-button home-width]]])))
 
 (views/defview home-wrapper []

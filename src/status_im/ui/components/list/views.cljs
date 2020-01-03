@@ -187,15 +187,20 @@
 
 (def default-footer [react/view styles/list-header-footer-spacing])
 
+;; reagent/with-let used to prevent re-creating of components.
+;; Without it TextInput placed in header will lose focus on every re-render.
+;; More details can be found here - https://github.com/facebook/react-native/issues/13602#issuecomment-300608431
 (defn- base-list-props
   [{:keys [key-fn render-fn empty-component header footer separator default-separator?]}]
   (let [separator (or separator (when (and platform/ios? default-separator?) default-separator))]
-    (merge (when key-fn          {:keyExtractor (wrap-key-fn key-fn)})
-           (when render-fn       {:renderItem (wrap-render-fn render-fn)})
-           (when separator       {:ItemSeparatorComponent (fn [] (reagent/as-element separator))})
-           (when empty-component {:ListEmptyComponent (fn [] (reagent/as-element empty-component))})
-           (when header          {:ListHeaderComponent (fn [] (reagent/as-element header))})
-           (when footer          {:ListFooterComponent (fn [] (reagent/as-element footer))}))))
+    (reagent/with-let [pre-binded-header (fn [] (reagent/as-element header))
+                       pre-binded-footer (fn [] (reagent/as-element footer))]
+      (merge (when key-fn          {:keyExtractor (wrap-key-fn key-fn)})
+             (when render-fn       {:renderItem (wrap-render-fn render-fn)})
+             (when separator       {:ItemSeparatorComponent (fn [] (reagent/as-element separator))})
+             (when empty-component {:ListEmptyComponent (fn [] (reagent/as-element empty-component))})
+             (when header          {:ListHeaderComponent pre-binded-header})
+             (when footer          {:ListFooterComponent pre-binded-footer})))))
 
 ;; Workaround an issue in reagent that does not consider JS array as JS value
 ;; This forces clj <-> js serialization and breaks clj semantic
