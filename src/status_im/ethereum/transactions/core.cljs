@@ -147,7 +147,6 @@
   [{:keys [db]} address transfers]
   (let [min-block (reduce
                    (fn [min-block {:keys [block]}]
-                     (println :FOO min-block block)
                      (min (or min-block block) block))
                    (get-min-known-block db address)
                    transfers)]

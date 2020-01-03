@@ -64,11 +64,9 @@
           (reduce
            (fn [accounts account]
              (let [normalized-account (eip55/address->checksum account)]
-               (if (contains? accounts normalized-account)
-                 (assoc-in accounts
-                           [normalized-account :fetching-recent-history?]
-                           true)
-                 accounts)))
+               (assoc-in accounts
+                         [normalized-account :fetching-recent-history?]
+                         true)))
            all-accounts
            accounts)))})
 
@@ -113,6 +111,8 @@
 
 (fx/defn new-wallet-event
   [cofx {:keys [type blockNumber accounts] :as event}]
+  (log/debug "[wallet-subs] new-wallet-event"
+             "event-type" type)
   (case type
     "newblock" (new-block cofx false blockNumber accounts)
     "history" (new-block cofx true blockNumber accounts)
