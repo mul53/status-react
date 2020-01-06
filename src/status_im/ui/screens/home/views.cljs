@@ -9,7 +9,6 @@
             [status-im.ui.components.react :as react]
             [status-im.ui.components.toolbar.view :as toolbar]
             [status-im.ui.screens.home.styles :as styles]
-            [status-im.ui.screens.home.filter.views :as filter.views]
             [status-im.utils.platform :as platform]
             [status-im.ui.components.tabbar.styles :as tabs.styles]
             [status-im.ui.screens.home.views.inner-item :as inner-item]
@@ -22,6 +21,8 @@
             [status-im.ui.components.button :as button]
             [taoensso.timbre :as log])
   (:require-macros [status-im.utils.views :as views]))
+
+(defonce search-active? (reagent/atom false))
 
 (defn welcome-image-wrapper []
   (let [dimensions (reagent/atom {})]
@@ -84,56 +85,104 @@
   [react/view {:style {:flex 1 :flex-direction :row :align-items :center :justify-content :center}}
    [react/i18n-text {:style styles/welcome-blank-text :key :welcome-blank-message}]])
 
-(defn home-items-view [_ _ _ _]
-  (let [analyze-pos? (reagent/atom true)
-        start-pos (reagent/atom 0)]
-    (fn [search-filter chats all-home-items hide-home-tooltip?]
-      ;[react/animated-view
-      ; {:style {:flex             1
-      ;          :background-color :white
-      ;          :margin-bottom    (- styles/search-input-height)
-      ;          }}
-      ; (if (or (seq all-home-items) (not hide-home-tooltip?))
-      [filter.views/home-filtered-items-list chats search-filter all-home-items]
-       ; [welcome-blank-page])
-       ;]
+(defn chat-list-footer [hide-home-tooltip?]
+  (when (and (not hide-home-tooltip?) (not @search-active?))
+    [home-tooltip-view]))
 
-      ;(if search-filter
-      ;  [filter.views/home-filtered-items-list chats]
-      ;  [react/animated-view
-      ;   {:style {:flex             1
-      ;            :background-color :white
-      ;            :margin-bottom    (- styles/search-input-height)
-      ;            }}
-      ;   (if (or (seq all-home-items) (not hide-home-tooltip?))
-      ;     [list/flat-list (merge {:data           all-home-items
-      ;                             :key-fn         first
-      ;                             :header         [react/view {:height 4 :flex 1}]
-      ;                             :footer         [react/view
-      ;                                              (when-not hide-home-tooltip?
-      ;                                                [home-tooltip-view])
-      ;                                              [react/view {:height 68 :flex 1}]]
-      ;                             :on-scroll-begin-drag
-      ;                             (fn [e]
-      ;                               (reset! analyze-pos? true)
-      ;                               (reset! start-pos (.-y (.-contentOffset (.-nativeEvent e)))))
-      ;                             :on-scroll-end-drag
-      ;                             (fn [e]
-      ;                               (reset! analyze-pos? false))
-      ;                             :on-scroll
-      ;                             (fn [e]
-      ;                               (let [y-pos (.-y (.-contentOffset (.-nativeEvent e)))
-      ;                                     scroling-down? (> y-pos @start-pos)
-      ;                                     scrolling-up-from-top? (< y-pos -20)]
-      ;                                 (if (and @analyze-pos? scrolling-up-from-top?)
-      ;                                   (filter.views/show-search!))
-      ;                                 (if (and @analyze-pos? scroling-down?)
-      ;                                   (filter.views/hide-search!))))
-      ;                             :render-fn
-      ;                             (fn [home-item _]
-      ;                               [inner-item/home-list-item home-item])})]
-      ;     [welcome-blank-page])])
-)))
+(def input-ref (reagent/atom nil))
+
+(views/defview search-input [{:keys [on-cancel on-focus on-change]}]
+  (views/letsubs
+    [{:keys [search-filter]} [:home-items]]
+    [react/view {:style styles/search-container}
+     [react/view {:style styles/search-input-container}
+      [icons/icon :main-icons/search {:color           colors/gray
+                                      :container-style {:margin-left  6
+                                                        :margin-right 2}}]
+      [react/text-input {:placeholder     (i18n/label :t/search)
+                         :blur-on-submit  true
+                         :multiline       false
+                         :ref             #(reset! input-ref %)
+                         :style           styles/search-input
+                         :default-value   search-filter
+                         :on-focus        #(do
+                                             (when on-focus
+                                               (on-focus search-filter))
+                                             (reset! search-active? true))
+                         :on-change       (fn [e]
+                                            (let [native-event (.-nativeEvent e)
+                                                  text         (.-text native-event)]
+                                              (when on-change
+                                                (on-change text))))}]]
+     (when @search-active?
+       [react/touchable-highlight
+        {:on-press (fn []
+                     (.clear @input-ref)
+                     (.blur @input-ref)
+                     (when on-cancel
+                       (on-cancel))
+                     (reset! search-active? false))
+         :style    {:margin-left 16}}
+        [react/text {:style {:color colors/blue}}
+         (i18n/label :t/cancel)]])]))
+
+(defn search-input-wrapper []
+  [search-input
+   {:on-cancel #(re-frame/dispatch [:search/filter-changed nil])
+    :on-focus  (fn [search-filter]
+                 (when-not search-filter
+                   (re-frame/dispatch [:search/filter-changed ""])))
+    :on-change (fn [text]
+                 (re-frame/dispatch [:search/filter-changed text]))}])
+
+(fn section-header [{:keys [title data]}]
+  (when @search-active?
+    [react/view {:style {:height 40}}
+     [react/text {:style styles/filter-section-title}
+      (i18n/label title)]]))
+
+(fn section-footer [{:keys [title data]}]
+  (when (and @search-active? (empty? data))
+    [list/big-list-item
+     {:text          (i18n/label (if (= title "messages")
+                                   :t/messages-search-coming-soon
+                                   :t/no-result))
+      :text-color    colors/gray
+      :hide-chevron? true
+      :action-fn     #()
+      :icon          (case title
+                       "messages" :main-icons/one-on-one-chat
+                       "browser" :main-icons/browser
+                       "chats" :main-icons/message)
+      :icon-color    colors/gray}]))
+
+(views/defview home-filtered-items-list []
+  (views/letsubs
+    [{:keys [chats all-home-items]} [:home-items]
+     {:keys [hide-home-tooltip?]} [:multiaccount]]
+    (let [list-ref (reagent/atom nil)]
+      [list/section-list
+       {:sections                     [{:title :t/chats
+                                        :data (if @search-active? chats all-home-items)}
+                                       {:title :t/messages
+                                        :data  []}]
+        :key-fn                        first
+        ;; true by default on iOS
+        :stickySectionHeadersEnabled   false
+        :keyboard-should-persist-taps  :always
+        :ref                           #(reset! list-ref %)
+        :header                        [search-input-wrapper]
+        :footer                        (chat-list-footer hide-home-tooltip?)
+        :contentInset                  {:top styles/search-input-height}
+        :render-section-header-fn section-header
+        :render-section-footer-fn section-footer
+        :render-fn                   (fn [home-item]
+                                       [inner-item/home-list-item home-item])
+        :on-scroll-end-drag
+        (fn [e]
+          (let [y (-> e .-nativeEvent .-contentOffset .-y)]
+            (if (and (neg? y) (> y (- (/ styles/search-input-height 2))))
+              (.scrollToLocation @list-ref #js {:sectionIndex 0 :itemIndex 0}))))}])))
 
 (views/defview home-action-button [home-width]
   (views/letsubs [logging-in? [:multiaccounts/login]]
@@ -149,7 +198,7 @@
 (views/defview home [loading?]
   (views/letsubs
     [anim-translate-y (animation/create-value connectivity/neg-connectivity-bar-height)
-     {:keys [search-filter chats all-home-items]} [:home-items]
+     {:keys [all-home-items]} [:home-items]
      {:keys [hide-home-tooltip?]} [:multiaccount]
      window-width [:dimensions/window-width]
      two-pane-ui-enabled? [:two-pane-ui-enabled?]]
@@ -182,11 +231,9 @@
            [react/activity-indicator {:flex      1
                                       :animating true}]
            [react/view {:flex 1}
-            [home-items-view
-             search-filter
-             chats
-             all-home-items
-             hide-home-tooltip?]])]
+            (if (and (empty? all-home-items) hide-home-tooltip? (not @search-active?))
+              [welcome-blank-page]
+              [home-filtered-items-list])])]
         [home-action-button home-width]]])))
 
 (views/defview home-wrapper []
