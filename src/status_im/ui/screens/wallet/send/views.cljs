@@ -105,8 +105,11 @@
           :placeholder         "0.0 "}]
         [asset-selector tx]
         (when amount-error
-          [tooltip/tooltip amount-error {:bottom-value 2
-                                         :font-size    12}])]
+          [tooltip/tooltip (if from
+                             amount-error
+                             (i18n/label :t/select-account-first))
+           {:bottom-value 2
+            :font-size    12}])]
        [components/separator]
        (when-not small-screen?
          [list-item/list-item {:type :section-header :title :t/from}])
