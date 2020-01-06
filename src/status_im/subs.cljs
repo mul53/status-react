@@ -1154,6 +1154,15 @@
    (get-in wallet [:accounts address :fetching-recent-history?])))
 
 (re-frame/reg-sub
+ :wallet/etherscan-link
+ (fn [db [_ address]]
+   (let [network (:networks/current-network db)
+         link    (get-in constants/default-networks-by-id
+                         [network :etherscan-link])]
+     (when link
+       (str link address)))))
+
+(re-frame/reg-sub
  :wallet/error-message
  :<- [:wallet]
  (fn [wallet]

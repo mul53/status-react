@@ -44,15 +44,21 @@
               (transactions/check-watched-transactions))))
 
 (fx/defn reorg
-  [{:keys [db] :as cofx} block-number accounts]
+  [{:keys [db] :as cofx} block-number all-accounts]
   (let [{:keys [:wallet/all-tokens]} db
         chain (ethereum/chain-keyword db)
         chain-tokens (into {} (map (juxt :address identity)
-                                   (tokens/tokens-for all-tokens chain)))]
+                                   (tokens/tokens-for all-tokens chain)))
+        accounts (set (keys (get-in db [:wallet :accounts])))]
     {:db (update-in db [:wallet :transactions]
                     wallet/remove-transactions-since-block block-number)
      :transactions/get-transfers {:chain-tokens chain-tokens
-                                  :from-block block-number}}))
+                                  :accounts     (->> all-accounts
+                                                     (filter accounts)
+                                                     (map eip55/address->checksums))
+                                  :before-block block-number
+                                  :page-size    20
+                                  :historical?  true}}))
 
 (fx/defn recent-history-fetching-started
   [{:keys [db]} accounts]
