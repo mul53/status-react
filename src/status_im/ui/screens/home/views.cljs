@@ -135,13 +135,13 @@
     :on-change (fn [text]
                  (re-frame/dispatch [:search/filter-changed text]))}])
 
-(fn section-header [{:keys [title data]}]
+(defn section-header [{:keys [title data]}]
   (when @search-active?
     [react/view {:style {:height 40}}
      [react/text {:style styles/filter-section-title}
       (i18n/label title)]]))
 
-(fn section-footer [{:keys [title data]}]
+(defn section-footer [{:keys [title data]}]
   (when (and @search-active? (empty? data))
     [list/big-list-item
      {:text          (i18n/label (if (= title "messages")
