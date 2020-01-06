@@ -71,6 +71,7 @@
    "wallet_getTransfers" {}
    "wallet_getTokensBalances" {}
    "wallet_getBlocksByAddress" {}
+   "wallet_getTransfersFromBlock" {}
    "wallet_getTransfersByAddressPage" {}
    "wallet_getCustomTokens" {}
    "wallet_addCustomToken" {}

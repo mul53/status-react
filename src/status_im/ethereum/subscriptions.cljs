@@ -30,6 +30,9 @@
         chain (ethereum/chain-keyword db)
         chain-tokens (into {} (map (juxt :address identity)
                                    (tokens/tokens-for all-tokens chain)))]
+    (log/debug "[wallet-subs] new-block"
+               "accounts" accounts
+               "block" block-number)
     (fx/merge cofx
               (cond-> {}
                 (not historical?)
@@ -37,10 +40,12 @@
 
                 ;;NOTE only get transfers if the new block contains some
                 ;;     from/to one of the multiaccount accounts
-                ;;(not-empty accounts)
-                #_(assoc ::transactions/get-transfers {:chain-tokens chain-tokens
-                                                       :from-block block-number
-                                                       :historical? historical?}))
+                (not-empty accounts)
+                (assoc :transactions/get-transfers-from-block
+                       {:chain-tokens chain-tokens
+                        :addresses    accounts
+                        :block        block-number
+                        :historical?  historical?}))
               (transactions/check-watched-transactions))))
 
 (fx/defn reorg
@@ -55,7 +60,7 @@
      :transactions/get-transfers {:chain-tokens chain-tokens
                                   :accounts     (->> all-accounts
                                                      (filter accounts)
-                                                     (map eip55/address->checksums))
+                                                     (map eip55/address->checksum))
                                   :before-block block-number
                                   :page-size    20
                                   :historical?  true}}))

@@ -1149,8 +1149,6 @@
  :wallet/fetching-recent-tx-history?
  :<- [:wallet]
  (fn [wallet [_ address]]
-   (log/debug "[subs] :wallet/fetching-recent-tx-history?"
-              "address" address)
    (get-in wallet [:accounts address :fetching-recent-history?])))
 
 (re-frame/reg-sub

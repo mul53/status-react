@@ -208,8 +208,27 @@
 
 (fx/defn tx-fetching-failed
   {:events [::tx-fetching-failed]}
-  [cofx address]
-  (tx-fetching-failed cofx [address]))
+  [cofx error address]
+  (log/debug "[transactions] tx-fetching-failed"
+             "address" address
+             "error" error)
+  (tx-fetching-ended cofx [address]))
+
+(re-frame/reg-fx
+ :transactions/get-transfers-from-block
+ (fn [{:keys [chain-tokens addresses block] :as params}]
+   (log/debug "[transactions] get-transfers-from-block"
+              "addresses" addresses
+              "block" block)
+   (doseq [address addresses]
+     (json-rpc/call
+      {:method "wallet_getTransfersFromBlock"
+       :params [address (encode/uint block)]
+       :on-success #(re-frame/dispatch
+                     [::new-transfers
+                      (enrich-transfers chain-tokens %)
+                      (assoc params :address address)])
+       :on-error #(re-frame/dispatch [::tx-fetching-failed % address])}))))
 
 (re-frame/reg-fx
  :transactions/get-transfers
