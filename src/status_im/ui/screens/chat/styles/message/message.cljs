@@ -93,6 +93,10 @@
     {:align-self    :flex-start
      :padding-left  (if platform/desktop? 24 8)}))
 
+(def message-author-touchable
+  {:margin-left        12
+   :padding-horizontal 2})
+
 (defn message-author [outgoing]
   (merge
    {:width      (+ 16 photos/default-size) ;; 16 is for the padding

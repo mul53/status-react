@@ -259,7 +259,8 @@
            from
            outgoing
            modal?
-           content] :as message} child]
+           content]
+    :as   message} child]
   [react/view (style/group-message-wrapper message)
    [react/view (style/message-body message)
     (when display-photo?
@@ -270,7 +271,8 @@
            [photos/member-photo from identicon]]])])
     [react/view (style/group-message-view outgoing display-photo?)
      (when display-username?
-       [react/touchable-opacity {:on-press #(re-frame/dispatch [:chat.ui/show-profile from])}
+       [react/touchable-opacity {:style    style/message-author-touchable
+                                 :on-press #(re-frame/dispatch [:chat.ui/show-profile from])}
         [message-author-name from alias]])
      [react/view {:style (style/timestamp-content-wrapper outgoing)}
       child]]]
