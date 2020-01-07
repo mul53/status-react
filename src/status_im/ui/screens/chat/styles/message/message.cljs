@@ -50,7 +50,7 @@
                    colors/white-transparent-70
                    colors/gray)}
          (when justify-timestamp? {:position              :absolute
-                                   :bottom                7
+                                   :bottom                10
                                    (if rtl? :left :right) 12})))
 
 (def message-expand-button
