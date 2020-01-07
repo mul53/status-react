@@ -142,17 +142,26 @@
 
 (defn message-view
   [{:keys [content-type outgoing group-chat last-in-group?]}]
-  (merge {:padding-vertical   6
-          :padding-horizontal 12
-          :border-radius      8
-          :margin-top         (if (and last-in-group?
-                                       (or outgoing
-                                           (not group-chat)))
-                                16
-                                4)}
-         (if (= content-type constants/content-type-emoji)
-           {:flex-direction :row}
-           {:background-color (if outgoing colors/blue colors/blue-light)})))
+  (merge
+   {:border-top-left-radius     16
+    :border-top-right-radius    16
+    :border-bottom-right-radius 16
+    :border-bottom-left-radius  16
+    :padding-vertical           6
+    :padding-horizontal         12
+    :border-radius              8
+    :margin-top                 (if (and last-in-group?
+                                         (or outgoing
+                                             (not group-chat)))
+                                  16
+                                  4)}
+   (if outgoing
+     {:border-bottom-right-radius 4}
+     {:border-bottom-left-radius 4 })
+
+   (if (= content-type constants/content-type-emoji)
+     {:flex-direction :row}
+     {:background-color (if outgoing colors/blue colors/blue-light)})))
 
 (def play-image
   {:width  33
