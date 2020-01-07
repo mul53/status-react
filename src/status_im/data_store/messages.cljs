@@ -33,7 +33,7 @@
 
       (update :outgoing-status keyword)
       (update :command-parameters clojure.set/rename-keys {:transactionHash :transaction-hash
-                                                           :CommandState :command-state})
+                                                           :commandState :command-state})
       (assoc :content {:chat-id (:chatId message)
                        :text (:text message)
                        :sticker (:sticker message)
